@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10131c">
+  <meta name="description" content="LIVROS-DIVINOS — uma biblioteca digital para explorar e ler publicações.">
+  <title>LIVROS-DIVINOS | Biblioteca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Página inicial"><span class="brand-mark">✦</span><span>LIVROS<span class="brand-light"> DIVINOS</span></span></a>
+    <div class="top-actions"><button id="themeToggle" class="icon-button" aria-label="Alternar tema" title="Alternar tema">☼</button><a class="github-link" href="https://github.com/detiillimichel-max/LIVROS-DIVINOS-" target="_blank" rel="noopener">GitHub ↗</a></div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="hero-copy"><span class="eyebrow"><i></i> BIBLIOTECA DIGITAL</span><h1>Conhecimento que<br><em>ilumina caminhos.</em></h1><p>Explore sua coleção, descubra uma leitura e continue de onde parou.</p>
+      <div class="hero-stats"><div><strong id="bookCount">—</strong><span>publicações</span></div><div class="stat-line"></div><div><strong>24h</strong><span>acesso à leitura</span></div></div></div>
+      <div class="hero-art" aria-hidden="true"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="book-illustration"><div class="book-spine"></div><div class="book-cover"><span>✦</span><b>PALAVRAS<br>QUE INSPIRAM</b><small>UMA JORNADA DE CONHECIMENTO</small></div></div><div class="spark spark-a">✧</div><div class="spark spark-b">✦</div></div>
+    </section>
+    <section class="library-section">
+      <div class="section-heading"><div><span class="eyebrow">SUA COLEÇÃO</span><h2>Estante de leitura</h2><p id="libraryHint">Carregando suas publicações…</p></div><div class="library-tools"><label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="Buscar um livro..." autocomplete="off"></label><button id="refreshBtn" class="refresh-button" title="Atualizar biblioteca">↻</button></div></div>
+      <div id="statusMessage" class="status-message"><span class="loader"></span> Preparando sua biblioteca…</div>
+      <div id="bookGrid" class="book-grid"></div>
+      <div id="emptyState" class="empty-state" hidden><span>⌕</span><h3>Nenhum livro encontrado</h3><p>Tente outro título ou atualize a biblioteca.</p></div>
+    </section>
+    <footer><span class="footer-star">✦</span> LIVROS-DIVINOS <span>•</span> Uma biblioteca para inspirar.</footer>
+  </main>
+  <div id="reader" class="reader" aria-hidden="true">
+    <div class="reader-top"><button id="closeReader" class="reader-close" aria-label="Fechar leitor">← <span>Biblioteca</span></button><div class="reader-title-wrap"><strong id="readerTitle">Leitor</strong><small id="readerPageLabel">Preparando documento…</small></div><a id="downloadBook" class="download-button" href="#" target="_blank" rel="noopener" download>↓ <span>Baixar</span></a></div>
+    <div class="reader-toolbar"><button id="prevPage" disabled>‹</button><span id="pageCounter">— / —</span><button id="nextPage" disabled>›</button><span class="toolbar-divider"></span><button id="zoomOut" aria-label="Diminuir zoom">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Aumentar zoom">+</button><button id="fitWidth" class="fit-button">Ajustar</button></div>
+    <div id="pdfViewport" class="pdf-viewport"><div id="pdfLoading" class="pdf-loading"><span class="loader"></span><p>Abrindo seu livro…</p></div><canvas id="pdfCanvas"></canvas></div>
+    <div id="readerError" class="reader-error" hidden>Não foi possível abrir este documento. Use o botão Baixar para visualizar o arquivo.</div>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+</body>
+</html>
