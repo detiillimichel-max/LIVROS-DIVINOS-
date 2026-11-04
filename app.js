@@ -9,8 +9,20 @@
   if (pdfjs()) pdfjs().GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const titleFrom = name => decodeURIComponent(name).replace(/\.[^.]+$/, '').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
   const escapeHtml = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const COVER_FILES = {
+    'bm_T (1).pdf': 'Screenshot_20261104-184816_Chrome.png',
+    'APRENDA DAS HISTÓRIS BIBLICAS .pdf': 'Screenshot_20261104-185138_Chrome.png',
+    'JEREMIAS E A MENSAGEM DE DEUS PARA NOS .pdf': 'Screenshot_20261104-185319_Chrome.png',
+    'PRINCIPIIOS BIBLICOS PARA UMA VIDA CRISTÃ.pdf': 'Screenshot_20261104-185718_JW Library.png',
+    'VENHA SER MEU SEGUIDOR .pdf': 'Screenshot_20261104-185942_Chrome.png',
+    'VIVA TENDO BEM EM MENTE O DIA DE JEOVÁ.pdf': 'Screenshot_20261104-190142_Chrome.png'
+  };
   const colors = [['#354d4b','#182d32'],['#51413b','#2b2528'],['#45415b','#25263d'],['#4a5141','#242e29'],['#574b39','#2c2924'],['#3c4b5b','#202b39']];
-  function cover(book,i){const c=colors[i%colors.length];return `<div class="cover-wrap" style="background:radial-gradient(circle at 50% 35%, ${c[0]}, ${c[1]} 76%)"><span class="cover-symbol">✦</span><span class="cover-label">${escapeHtml(book.title)}</span></div>`;}
+  function cover(book,i){
+    const c=colors[i%colors.length];
+    const image=book.coverUrl ? `<img class="cover-image" src="${book.coverUrl}" alt="Capa de ${escapeHtml(book.title)}" loading="lazy">` : `<span class="cover-symbol">✦</span><span class="cover-label">${escapeHtml(book.title)}</span>`;
+    return `<div class="cover-wrap" style="background:radial-gradient(circle at 50% 35%, ${c[0]}, ${c[1]} 76%)">${image}</div>`;
+  }
   function render(){
     const term=search.value.trim().toLocaleLowerCase('pt-BR');
     filtered=books.filter(b=>b.title.toLocaleLowerCase('pt-BR').includes(term));
@@ -26,7 +38,7 @@
       const response=await fetch(API,{headers:{Accept:'application/vnd.github+json'}});
       if(!response.ok) throw new Error(response.status===403?'Limite temporário da API do GitHub. Tente novamente em alguns instantes.':'Não foi possível acessar os arquivos do repositório.');
       const files=await response.json();
-      books=files.filter(f=>f.type==='file'&&/\.pdf$/i.test(f.name)).map(f=>({name:f.name,title:titleFrom(f.name),url:f.download_url||`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(f.name)}`,size:f.size}));
+      books=files.filter(f=>f.type==='file'&&/\\.pdf$/i.test(f.name)).map(f=>({name:f.name,title:titleFrom(f.name),url:f.download_url||`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(f.name)}`,coverUrl:COVER_FILES[f.name]?`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(COVER_FILES[f.name])}`:null,size:f.size}));
       books.sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
       status.hidden=true;render();
     }catch(err){status.innerHTML='<span>⚠</span> '+escapeHtml(err.message);$('libraryHint').textContent='Verifique sua conexão e tente atualizar.';}
