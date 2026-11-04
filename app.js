@@ -5,6 +5,7 @@
   const $ = id => document.getElementById(id);
   const grid = $('bookGrid'), status = $('statusMessage'), search = $('searchInput');
   let books = [], filtered = [], currentPdf = null, currentPage = 1, scale = 1.15, renderTask = null, toastTimer;
+  let speechRunId = 0, speechChunks = [], speechIndex = 0, speechRate = 1;
   const pdfjs = () => window.pdfjsLib;
   if (pdfjs()) pdfjs().GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const titleFrom = name => decodeURIComponent(name).replace(/\.[^.]+$/, '').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
@@ -44,8 +45,67 @@
     }catch(err){status.innerHTML='<span>⚠</span> '+escapeHtml(err.message);$('libraryHint').textContent='Verifique sua conexão e tente atualizar.';}
   }
   function notify(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600);}
+  function speechSupported(){return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;}
+  function updateSpeechStatus(message){$('speechStatus').textContent=message;}
+  function stopSpeech(message='Leitura parada'){
+    speechRunId++;
+    if(speechSupported())window.speechSynthesis.cancel();
+    speechChunks=[];speechIndex=0;
+    $('pauseSpeech').textContent='⏸ Pausar';$('pauseSpeech').disabled=true;$('stopSpeech').disabled=true;$('readAloud').disabled=!speechSupported();
+    updateSpeechStatus(message);
+  }
+  function splitSpeechText(text,max=900){
+    const sentences=text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[text];
+    const chunks=[];let part='';
+    for(const sentence of sentences){
+      const s=sentence.trim();if(!s)continue;
+      if((part+' '+s).trim().length<=max){part=(part+' '+s).trim();continue;}
+      if(part)chunks.push(part);
+      if(s.length<=max){part=s;continue;}
+      const words=s.split(/\s+/);part='';let piece='';
+      for(const word of words){if((piece+' '+word).trim().length>max){if(piece)chunks.push(piece);piece=word;}else piece=(piece+' '+word).trim();}
+      part=piece;
+    }
+    if(part)chunks.push(part);return chunks;
+  }
+  async function readPageAloud(runId){
+    if(runId!==speechRunId||!currentPdf)return;
+    try{
+      const page=await currentPdf.getPage(currentPage);
+      const content=await page.getTextContent();
+      const text=content.items.map(item=>(item.str||'')+(item.hasEOL?'\n':' ')).join('').replace(/\s+/g,' ').trim();
+      if(!text){stopSpeech('Esta página não contém texto selecionável.');notify('Este PDF pode precisar de OCR para leitura em voz alta.');return;}
+      speechChunks=splitSpeechText(text);speechIndex=0;
+      $('pauseSpeech').disabled=false;$('stopSpeech').disabled=false;$('readAloud').disabled=true;
+      updateSpeechStatus('Lendo página '+currentPage+' de '+currentPdf.numPages);
+      speakNextChunk(runId);
+    }catch(error){console.error(error);stopSpeech('Não foi possível extrair o texto desta página.');}
+  }
+  function speakNextChunk(runId){
+    if(runId!==speechRunId||!currentPdf)return;
+    if(speechIndex>=speechChunks.length){
+      if(currentPage<currentPdf.numPages){currentPage++;renderPage().then(()=>readPageAloud(runId)).catch(()=>stopSpeech('Erro ao avançar de página.'));return;}
+      stopSpeech('Leitura concluída.');notify('Você chegou ao final do livro.');return;
+    }
+    const utterance=new SpeechSynthesisUtterance(speechChunks[speechIndex++]);
+    utterance.lang='pt-BR';utterance.rate=speechRate;
+    const voices=window.speechSynthesis.getVoices();
+    const voice=voices.find(v=>/^pt-BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang));
+    if(voice)utterance.voice=voice;
+    utterance.onend=()=>speakNextChunk(runId);
+    utterance.onerror=event=>{if(runId===speechRunId&&event.error!=='canceled'&&event.error!=='interrupted')stopSpeech('A voz do Android encontrou um erro.');};
+    window.speechSynthesis.speak(utterance);
+  }
+  function startSpeech(){
+    if(!currentPdf)return;
+    if(!speechSupported()){notify('A leitura em voz alta não é suportada neste navegador.');return;}
+    stopSpeech('Preparando leitura…');
+    const runId=speechRunId;
+    readPageAloud(runId);
+  }
   async function openBook(book){
     if(!book)return;
+    stopSpeech('Abra um livro para ouvir a leitura.');
     $('reader').classList.add('open');$('reader').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
     $('readerTitle').textContent=book.title;$('readerPageLabel').textContent='Carregando documento…';$('downloadBook').href=book.url;
     $('pdfLoading').hidden=false;$('readerError').hidden=true;$('pdfCanvas').hidden=true;
@@ -71,13 +131,18 @@
     $('prevPage').disabled=currentPage<=1;$('nextPage').disabled=currentPage>=currentPdf.numPages;
     $('zoomValue').textContent=Math.round(scale*100)+'%';
   }
-  function closeReader(){if(renderTask){try{renderTask.cancel();}catch(_){}}$('reader').classList.remove('open');$('reader').setAttribute('aria-hidden','true');document.body.style.overflow='';}
+  function closeReader(){stopSpeech('Leitura parada');if(renderTask){try{renderTask.cancel();}catch(_){}}$('reader').classList.remove('open');$('reader').setAttribute('aria-hidden','true');document.body.style.overflow='';}
   $('closeReader').addEventListener('click',closeReader);
-  $('prevPage').addEventListener('click',()=>{if(currentPage>1){currentPage--;renderPage();}});
-  $('nextPage').addEventListener('click',()=>{if(currentPdf&&currentPage<currentPdf.numPages){currentPage++;renderPage();}});
+  $('prevPage').addEventListener('click',()=>{if(currentPage>1){stopSpeech('Leitura pausada ao mudar de página');currentPage--;renderPage();}});
+  $('nextPage').addEventListener('click',()=>{if(currentPdf&&currentPage<currentPdf.numPages){stopSpeech('Leitura pausada ao mudar de página');currentPage++;renderPage();}});
   $('zoomIn').addEventListener('click',()=>{scale=Math.min(2.5,scale+.15);renderPage();});
   $('zoomOut').addEventListener('click',()=>{scale=Math.max(.55,scale-.15);renderPage();});
   $('fitWidth').addEventListener('click',async()=>{if(!currentPdf)return;const p=await currentPdf.getPage(currentPage),base=p.getViewport({scale:1}),available=$('pdfViewport').clientWidth-24;scale=Math.max(.5,Math.min(2.5,available/base.width));renderPage();});
+  $('readAloud').addEventListener('click',startSpeech);
+  $('pauseSpeech').addEventListener('click',()=>{if(!speechSupported())return;if(window.speechSynthesis.paused){window.speechSynthesis.resume();$('pauseSpeech').textContent='⏸ Pausar';updateSpeechStatus('Leitura em andamento');}else{window.speechSynthesis.pause();$('pauseSpeech').textContent='▶ Continuar';updateSpeechStatus('Leitura pausada');}});
+  $('stopSpeech').addEventListener('click',()=>stopSpeech());
+  $('speechRate').addEventListener('change',e=>{speechRate=Number(e.target.value)||1;});
+  if(!speechSupported()){$('readAloud').disabled=true;updateSpeechStatus('Leitura por voz indisponível neste navegador.');}else{updateSpeechStatus('Voz em português do Android');}
   search.addEventListener('input',render);
   $('refreshBtn').addEventListener('click',loadLibrary);
   $('themeToggle').addEventListener('click',()=>{document.body.classList.toggle('light');$('themeToggle').textContent=document.body.classList.contains('light')?'☾':'☼';});
