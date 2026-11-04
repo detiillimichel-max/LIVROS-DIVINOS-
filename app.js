@@ -68,12 +68,38 @@
     }
     if(part)chunks.push(part);return chunks;
   }
+  function reconstructPdfText(items){
+    let output='', previous=null;
+    for(const item of items){
+      const part=(item.str||'');
+      if(!part)continue;
+      const transform=item.transform||[];
+      const x=Number(transform[4]);
+      const y=Number(transform[5]);
+      const fontSize=Math.max(1,Math.abs(Number(transform[3])||Number(transform[0])||10));
+      if(previous){
+        const sameLine=Number.isFinite(y)&&Number.isFinite(previous.y)&&Math.abs(y-previous.y)<=Math.max(2,fontSize*.45);
+        if(!sameLine){
+          output=output.replace(/[ \\t]+$/,'')+'\\n';
+        }else if(Number.isFinite(x)&&Number.isFinite(previous.endX)){
+          const gap=x-previous.endX;
+          const threshold=Math.max(1.5,fontSize*.18);
+          if(gap>threshold&&!/\\s$/.test(output)&&!/^\\s/.test(part))output+=' ';
+        }
+      }
+      output+=part;
+      const width=Number(item.width);
+      previous={y,endX:Number.isFinite(x)&&Number.isFinite(width)?x+width:NaN};
+      if(item.hasEOL){output=output.replace(/[ \\t]+$/,'')+'\\n';previous=null;}
+    }
+    return output.replace(/[ \\t]+/g,' ').replace(/ *\\n */g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim();
+  }
   async function readPageAloud(runId){
     if(runId!==speechRunId||!currentPdf)return;
     try{
       const page=await currentPdf.getPage(currentPage);
       const content=await page.getTextContent();
-      const text=content.items.map(item=>(item.str||'')+(item.hasEOL?'\n':' ')).join('').replace(/\s+/g,' ').trim();
+      const text=reconstructPdfText(content.items);
       if(!text){stopSpeech('Esta página não contém texto selecionável.');notify('Este PDF pode precisar de OCR para leitura em voz alta.');return;}
       speechChunks=splitSpeechText(text);speechIndex=0;
       $('pauseSpeech').disabled=false;$('stopSpeech').disabled=false;$('readAloud').disabled=true;
