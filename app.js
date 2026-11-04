@@ -39,7 +39,7 @@
       const response=await fetch(API,{headers:{Accept:'application/vnd.github+json'}});
       if(!response.ok) throw new Error(response.status===403?'Limite temporário da API do GitHub. Tente novamente em alguns instantes.':'Não foi possível acessar os arquivos do repositório.');
       const files=await response.json();
-      books=files.filter(f=>f.type==='file'&&/\\.pdf$/i.test(f.name)).map(f=>({name:f.name,title:titleFrom(f.name),url:f.download_url||`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(f.name)}`,coverUrl:COVER_FILES[f.name]?`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(COVER_FILES[f.name])}`:null,size:f.size}));
+      books=files.filter(f=>f.type==='file'&&/\.pdf$/i.test(f.name)).map(f=>({name:f.name,title:titleFrom(f.name),url:f.download_url||`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(f.name)}`,coverUrl:COVER_FILES[f.name]?`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(COVER_FILES[f.name])}`:null,size:f.size}));
       books.sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
       status.hidden=true;render();
     }catch(err){status.innerHTML='<span>⚠</span> '+escapeHtml(err.message);$('libraryHint').textContent='Verifique sua conexão e tente atualizar.';}
