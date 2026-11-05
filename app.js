@@ -70,11 +70,18 @@
   }
   function cleanSpeechText(text){
     return String(text)
-      .replace(/Q\s+U\s+A\s+L\s+É\s+A\s+S\s+U\s+A\s+M\s+E\s+N\s+S\s+A\s+G\s+E\s+M\s*\?/gi,'QUAL É A SUA MENSAGEM?')
+      // Recompõe letras capitulares destacadas, como "A" + "NTES" = "ANTES".
+      .replace(/\\b([A-ZÁÉÍÓÚÂÊÔÃÕÇ])\\s*\\n\\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2,})\\b/g,'$1$2')
+      // Une palavras quebradas por hífen no fim da linha: "Sagra-\ndas" = "Sagradas".
+      .replace(/-\\s*\\n\\s*/g,'')
+      // Remove quebras de linha de diagramação para a voz ler frases contínuas.
+      .replace(/[ \\t]*\\n+[ \\t]*/g,' ')
+      .replace(/Q\\s+U\\s+A\\s+L\\s+É\\s+A\\s+S\\s+U\\s+A\\s+M\\s+E\\s+N\\s+S\\s+A\\s+G\\s+E\\s+M\\s*\\?/gi,'QUAL É A SUA MENSAGEM?')
       .replace(/[“”„‟«»]/g,'')
-      .replace(/(?<!\p{L})['’‘´\x60ʼ]|['’‘´\x60ʼ](?!\p{L})/gu,'')
-      .replace(/[ \t]+/g,' ')
-      .replace(/\s+([,.;:!?])/g,'$1');
+      .replace(/(?<!\\p{L})['’‘´\\x60ʼ]|['’‘´\\x60ʼ](?!\\p{L})/gu,'')
+      .replace(/[ \\t]+/g,' ')
+      .replace(/\\s+([,.;:!?])/g,'$1')
+      .trim();
   }
   function reconstructPdfText(items){
     let output='', previous=null;
