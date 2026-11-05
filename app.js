@@ -68,6 +68,14 @@
     }
     if(part)chunks.push(part);return chunks;
   }
+  function cleanSpeechText(text){
+    return String(text)
+      .replace(/Q\s+U\s+A\s+L\s+É\s+A\s+S\s+U\s+A\s+M\s+E\s+N\s+S\s+A\s+G\s+E\s+M\s*\?/gi,'QUAL É A SUA MENSAGEM?')
+      .replace(/[“”„‟«»]/g,'')
+      .replace(/(?<!\p{L})['’‘´\x60ʼ]|['’‘´\x60ʼ](?!\p{L})/gu,'')
+      .replace(/[ \t]+/g,' ')
+      .replace(/\s+([,.;:!?])/g,'$1');
+  }
   function reconstructPdfText(items){
     let output='', previous=null;
     for(const item of items){
@@ -100,7 +108,7 @@
     try{
       const page=await currentPdf.getPage(currentPage);
       const content=await page.getTextContent();
-      const text=reconstructPdfText(content.items);
+      const text=cleanSpeechText(reconstructPdfText(content.items));
       if(!text){stopSpeech('Esta página não contém texto selecionável.');notify('Este PDF pode precisar de OCR para leitura em voz alta.');return;}
       speechChunks=splitSpeechText(text);speechIndex=0;
       $('pauseSpeech').disabled=false;$('stopSpeech').disabled=false;$('readAloud').disabled=true;
